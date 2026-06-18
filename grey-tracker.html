@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grey | Crypto — Live Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0c0c0c;
+  --surface: #141414;
+  --border: #222;
+  --white: #f0f0f0;
+  --grey: #666;
+  --grey2: #333;
+  --green: #22c55e;
+  --red: #ef4444;
+}
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Space Grotesk', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+#loginScreen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#loginScreen.hidden { display: none; }
+
+.login-box {
+  width: 100%;
+  max-width: 340px;
+  padding: 48px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.login-logo { font-size: 11px; font-weight: 700; letter-spacing: 0.22em; color: var(--grey); text-transform: uppercase; margin-bottom: 36px; }
+.login-title { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+.login-sub { font-size: 13px; color: var(--grey); margin-bottom: 28px; }
+.login-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--white); font-family: 'Space Mono', monospace; font-size: 14px;
+  padding: 13px 14px; letter-spacing: 0.1em; margin-bottom: 12px; outline: none;
+}
+.login-input:focus { border-color: var(--grey2); }
+.login-btn {
+  width: 100%; padding: 13px; background: var(--white); color: var(--bg);
+  border: none; font-family: 'Space Grotesk', sans-serif; font-size: 12px;
+  font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer;
+}
+.login-btn:hover { opacity: 0.85; }
+.login-err { font-size: 12px; color: var(--red); margin-top: 10px; display: none; }
+
+#mainScreen { display: none; }
+#mainScreen.visible { display: block; }
+
+nav {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px 40px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: rgba(12,12,12,0.96);
+  backdrop-filter: blur(10px); z-index: 50;
+}
+.nav-logo { font-size: 11px; font-weight: 700; letter-spacing: 0.22em; color: var(--grey); text-transform: uppercase; }
+.nav-right { display: flex; align-items: center; gap: 20px; }
+.nav-live { font-size: 10px; letter-spacing: 0.14em; color: var(--green); border: 1px solid var(--green); padding: 4px 10px; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.admin-btn { font-size: 11px; letter-spacing: 0.12em; color: var(--grey); cursor: pointer; border: none; background: none; font-family: 'Space Grotesk', sans-serif; text-transform: uppercase; }
+.admin-btn:hover { color: var(--white); }
+
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--border); }
+.stat { padding: 36px 40px; border-right: 1px solid var(--border); }
+.stat:last-child { border-right: none; }
+.stat-val { font-family: 'Space Mono', monospace; font-size: clamp(26px, 3.5vw, 44px); font-weight: 700; line-height: 1; margin-bottom: 8px; }
+.stat-val.green { color: var(--green); }
+.stat-val.red { color: var(--red); }
+.stat-lbl { font-size: 10px; letter-spacing: 0.16em; color: var(--grey); text-transform: uppercase; }
+
+.table-wrap { padding: 40px; }
+.table-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.table-title { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--grey); }
+.filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.ftab { font-size: 11px; letter-spacing: 0.1em; color: var(--grey); padding: 6px 14px; border: 1px solid var(--border); cursor: pointer; background: none; font-family: 'Space Grotesk', sans-serif; text-transform: uppercase; }
+.ftab.active, .ftab:hover { background: var(--white); color: var(--bg); border-color: var(--white); }
+
+table { width: 100%; border-collapse: collapse; }
+thead tr { border-bottom: 1px solid var(--border); }
+th { text-align: left; font-size: 10px; letter-spacing: 0.16em; color: var(--grey); text-transform: uppercase; padding: 12px 16px; font-weight: 500; }
+th:first-child { padding-left: 0; }
+th:last-child { padding-right: 0; text-align: right; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--surface); }
+td { padding: 16px 16px; font-size: 13px; }
+td:first-child { padding-left: 0; }
+td:last-child { padding-right: 0; text-align: right; }
+
+.td-pair { font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; color: var(--white); }
+.td-date { font-size: 12px; color: var(--grey); }
+.badge { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; padding: 3px 8px; border: 1px solid currentColor; display: inline-block; }
+.badge-l { color: var(--green); }
+.badge-s { color: var(--red); }
+.td-entry { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--grey); }
+.td-pnl { font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700; }
+.td-pnl.pos { color: var(--green); }
+.td-pnl.neg { color: var(--red); }
+.td-status { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+.status-open { color: var(--green); }
+.status-closed { color: var(--grey); }
+
+.empty { text-align: center; padding: 80px; color: var(--grey); font-size: 13px; }
+.loading { text-align: center; padding: 60px; color: var(--grey); font-size: 13px; letter-spacing: 0.1em; }
+
+#adminPanel { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
+#adminPanel.open { display: flex; }
+.panel-inner { background: var(--surface); border-top: 1px solid var(--border); width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; padding: 40px; }
+.panel-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+.panel-title { font-size: 16px; font-weight: 600; }
+.close-btn { font-size: 20px; color: var(--grey); cursor: pointer; background: none; border: none; }
+.close-btn:hover { color: var(--white); }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.form-field { display: flex; flex-direction: column; gap: 6px; }
+label { font-size: 10px; letter-spacing: 0.16em; color: var(--grey); text-transform: uppercase; }
+input[type=text], input[type=number], input[type=date], select {
+  background: var(--bg); border: 1px solid var(--border); color: var(--white);
+  font-family: 'Space Grotesk', sans-serif; font-size: 13px; padding: 10px 12px;
+  outline: none; width: 100%; -webkit-appearance: none;
+}
+input:focus, select:focus { border-color: #444; }
+select option { background: var(--surface); }
+
+.add-btn { width: 100%; padding: 14px; background: var(--white); color: var(--bg); border: none; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; margin-top: 8px; }
+.add-btn:hover { opacity: 0.85; }
+.add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.admin-trades { margin-top: 32px; border-top: 1px solid var(--border); padding-top: 24px; }
+.admin-trade-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.admin-trade-item:last-child { border-bottom: none; }
+.del-btn { font-size: 11px; color: var(--red); cursor: pointer; background: none; border: 1px solid var(--red); padding: 4px 10px; font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.1em; }
+.del-btn:hover { background: var(--red); color: var(--white); }
+
+.logout-btn { margin-top: 24px; width: 100%; padding: 12px; background: none; border: 1px solid var(--border); color: var(--grey); font-family: 'Space Grotesk', sans-serif; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
+.logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+footer { padding: 24px 40px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 11px; color: var(--grey); }
+footer a { color: var(--grey); text-decoration: none; }
+footer a:hover { color: var(--white); }
+
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .stat { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+  .stat:nth-child(2n) { border-right: none; }
+  .table-wrap { padding: 24px 20px; }
+  th, td { padding: 10px 6px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .panel-inner { padding: 24px 20px; }
+  footer { padding: 20px; flex-direction: column; gap: 8px; }
+}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">Grey | Crypto</div>
+    <div class="login-title">Панель управления</div>
+    <div class="login-sub">Только для администратора</div>
+    <input type="password" class="login-input" id="pwdInput" placeholder="Пароль" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Войти</button>
+    <div class="login-err" id="loginErr">Неверный пароль</div>
+  </div>
+</div>
+
+<div id="mainScreen">
+  <nav>
+    <div class="nav-logo">Grey | Crypto — Tracker</div>
+    <div class="nav-right">
+      <div class="nav-live">● Live</div>
+      <button class="admin-btn" id="adminBtnEl" onclick="openAdmin()" style="display:none">Управление</button>
+    </div>
+  </nav>
+
+  <div class="stats-row" id="statsRow">
+    <div class="stat"><div class="stat-val">—</div><div class="stat-lbl">Суммарный PnL</div></div>
+    <div class="stat"><div class="stat-val">—</div><div class="stat-lbl">Винрейт</div></div>
+    <div class="stat"><div class="stat-val">—</div><div class="stat-lbl">Закрытых сделок</div></div>
+    <div class="stat"><div class="stat-val">—</div><div class="stat-lbl">Открытых сейчас</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-head">
+      <div class="table-title">История сделок</div>
+      <div class="filter-tabs">
+        <button class="ftab active" onclick="setFilter('all',this)">Все</button>
+        <button class="ftab" onclick="setFilter('open',this)">Открытые</button>
+        <button class="ftab" onclick="setFilter('long',this)">Long</button>
+        <button class="ftab" onclick="setFilter('short',this)">Short</button>
+      </div>
+    </div>
+    <div id="tableArea"><div class="loading">Загрузка...</div></div>
+  </div>
+
+  <footer>
+    <span onclick="showLoginModal()" style="cursor:default">© 2025 Grey | Crypto</span>
+    <a href="https://t.me/Yevheniygrey" target="_blank">@Yevheniygrey</a>
+  </footer>
+
+  <!-- Login modal -->
+  <div id="loginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;">
+    <div style="background:#141414;border:1px solid #222;padding:40px;width:100%;max-width:320px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.22em;color:#666;text-transform:uppercase;margin-bottom:28px">Grey | Crypto</div>
+      <div style="font-size:18px;font-weight:600;margin-bottom:20px">Вход в панель</div>
+      <input type="password" id="modalPwd" placeholder="Пароль" onkeydown="if(event.key='Enter')doModalLogin()"
+        style="width:100%;background:#0c0c0c;border:1px solid #222;color:#f0f0f0;font-family:'Space Mono',monospace;font-size:14px;padding:13px 14px;letter-spacing:0.1em;margin-bottom:12px;outline:none;">
+      <button onclick="doModalLogin()" style="width:100%;padding:13px;background:#f0f0f0;color:#0c0c0c;border:none;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;cursor:pointer;margin-bottom:10px">Войти</button>
+      <button onclick="hideLoginModal()" style="width:100%;padding:10px;background:none;border:1px solid #222;color:#666;font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer">Отмена</button>
+      <div id="modalErr" style="font-size:12px;color:#ef4444;margin-top:10px;display:none">Неверный пароль</div>
+    </div>
+  </div>
+</div>
+
+<div id="adminPanel">
+  <div class="panel-inner">
+    <div class="panel-top">
+      <div class="panel-title">Добавить сделку</div>
+      <button class="close-btn" onclick="closeAdmin()">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Торговая пара</label>
+        <input type="text" id="f_pair" placeholder="BTC/USDT PERP">
+      </div>
+      <div class="form-field">
+        <label>Дата</label>
+        <input type="date" id="f_date">
+      </div>
+      <div class="form-field">
+        <label>Направление</label>
+        <select id="f_dir">
+          <option value="long">Long</option>
+          <option value="short">Short</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Плечо (×)</label>
+        <input type="number" id="f_lev" placeholder="10">
+      </div>
+      <div class="form-field">
+        <label>Цена входа</label>
+        <input type="text" id="f_entry" placeholder="98400">
+      </div>
+      <div class="form-field">
+        <label>TP / Цена выхода</label>
+        <input type="text" id="f_tp" placeholder="103200">
+      </div>
+      <div class="form-field">
+        <label>PnL % (итог)</label>
+        <input type="number" id="f_pnl" placeholder="107.78" step="0.01">
+      </div>
+      <div class="form-field">
+        <label>Статус</label>
+        <select id="f_status">
+          <option value="closed">Закрыта</option>
+          <option value="open">Открыта</option>
+        </select>
+      </div>
+    </div>
+    <button class="add-btn" id="addBtn" onclick="addTrade()">Добавить сделку</button>
+    <div class="admin-trades">
+      <div id="adminList"><div style="color:var(--grey);font-size:13px">Загрузка...</div></div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Выйти из панели</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAPoD58Mwz9Kuy9v3ttRWZYVWUjxXD7B6U",
+  authDomain: "grey-tracker.firebaseapp.com",
+  projectId: "grey-tracker",
+  storageBucket: "grey-tracker.firebasestorage.app",
+  messagingSenderId: "776258930030",
+  appId: "1:776258930030:web:7ceb2ad2c624bd812e6d7f"
+};
+
+const ADMIN_PASSWORD = 'grey2025';
+
+const SEED_TRADES = [
+  {pair:"AERGOUSDT", date:"2025-04-02", dir:"long",  lev:"15", entry:"", tp:"", pnl:57.11,  status:"closed"},
+  {pair:"BLURUSDT",  date:"2025-04-07", dir:"long",  lev:"10", entry:"", tp:"", pnl:67.44,  status:"closed"},
+  {pair:"GRASSUSDT", date:"2025-04-12", dir:"long",  lev:"12", entry:"", tp:"", pnl:53.35,  status:"closed"},
+  {pair:"SOLUSDT",   date:"2025-04-17", dir:"long",  lev:"10", entry:"", tp:"", pnl:-21.44, status:"closed"},
+  {pair:"PHAUSDT",   date:"2025-04-20", dir:"long",  lev:"15", entry:"", tp:"", pnl:51.51,  status:"closed"},
+  {pair:"JUPUSDT",   date:"2025-04-25", dir:"long",  lev:"13", entry:"", tp:"", pnl:103.00, status:"closed"},
+  {pair:"PARTIUSDT", date:"2025-04-30", dir:"long",  lev:"10", entry:"", tp:"", pnl:73.96,  status:"closed"},
+  {pair:"HYPEUSDT",  date:"2025-05-04", dir:"short", lev:"10", entry:"", tp:"", pnl:60.30,  status:"closed"},
+  {pair:"ENSOUSDT",  date:"2025-05-08", dir:"long",  lev:"10", entry:"", tp:"", pnl:121.42, status:"closed"},
+  {pair:"LDOUSDT",   date:"2025-05-12", dir:"short", lev:"10", entry:"", tp:"", pnl:67.53,  status:"closed"},
+  {pair:"BNBUSDT",   date:"2025-05-17", dir:"long",  lev:"8",  entry:"", tp:"", pnl:-18.72, status:"closed"},
+  {pair:"HBARUSDT",  date:"2025-05-21", dir:"long",  lev:"10", entry:"", tp:"", pnl:46.80,  status:"closed"},
+  {pair:"LINKUSDT",  date:"2025-05-26", dir:"long",  lev:"10", entry:"", tp:"", pnl:60.11,  status:"closed"},
+  {pair:"BCHUSDT",   date:"2025-05-31", dir:"long",  lev:"10", entry:"", tp:"", pnl:71.58,  status:"closed"},
+  {pair:"XLMUSDT",   date:"2025-06-04", dir:"long",  lev:"10", entry:"", tp:"", pnl:74.94,  status:"closed"},
+  {pair:"AVAXUSDT",  date:"2025-06-09", dir:"short", lev:"12", entry:"", tp:"", pnl:-24.18, status:"closed"},
+  {pair:"JUPUSDT",   date:"2025-06-14", dir:"long",  lev:"10", entry:"", tp:"", pnl:151.67, status:"closed"},
+  {pair:"POPCATUSDT",date:"2025-06-19", dir:"long",  lev:"10", entry:"", tp:"", pnl:197.97, status:"closed"},
+  {pair:"CHZUSDT",   date:"2025-06-24", dir:"long",  lev:"19", entry:"", tp:"", pnl:53.12,  status:"closed"},
+  {pair:"RIVERUSDT", date:"2025-06-29", dir:"long",  lev:"20", entry:"", tp:"", pnl:49.52,  status:"closed"},
+  {pair:"HYPEUSDT",  date:"2025-07-04", dir:"long",  lev:"21", entry:"", tp:"", pnl:56.55,  status:"closed"},
+  {pair:"ATOMUSDT",  date:"2025-07-09", dir:"long",  lev:"21", entry:"", tp:"", pnl:97.77,  status:"closed"},
+  {pair:"NEARUSDT",  date:"2025-07-14", dir:"long",  lev:"23", entry:"", tp:"", pnl:58.12,  status:"closed"},
+  {pair:"DOTUSDT",   date:"2025-07-19", dir:"long",  lev:"10", entry:"", tp:"", pnl:-19.55, status:"closed"},
+  {pair:"UNUSDT",    date:"2025-07-24", dir:"long",  lev:"22", entry:"", tp:"", pnl:107.78, status:"closed"},
+  {pair:"ETHUSDT",   date:"2025-08-01", dir:"long",  lev:"30", entry:"", tp:"", pnl:75.82,  status:"closed"},
+  {pair:"BLURUSDT",  date:"2025-08-10", dir:"long",  lev:"29", entry:"", tp:"", pnl:100.46, status:"closed"},
+  {pair:"HYPEUSDT",  date:"2025-08-18", dir:"short", lev:"26", entry:"", tp:"", pnl:50.31,  status:"closed"},
+  {pair:"WLDUSDT",   date:"2025-08-26", dir:"short", lev:"24", entry:"", tp:"", pnl:61.02,  status:"closed"},
+  {pair:"APTUSDT",   date:"2025-09-03", dir:"long",  lev:"11", entry:"", tp:"", pnl:-22.30, status:"closed"},
+  {pair:"INJUSDT",   date:"2025-09-10", dir:"long",  lev:"25", entry:"", tp:"", pnl:68.82,  status:"closed"},
+  {pair:"PYTHUSDT",  date:"2025-10-05", dir:"long",  lev:"37", entry:"", tp:"", pnl:95.94,  status:"closed"},
+  {pair:"WIFUSDT",   date:"2025-11-08", dir:"long",  lev:"43", entry:"", tp:"", pnl:123.09, status:"closed"},
+  {pair:"KERNELUSDT",date:"2025-12-06", dir:"long",  lev:"35", entry:"", tp:"", pnl:102.33, status:"closed"},
+  {pair:"OPUSDT",    date:"2025-12-14", dir:"short", lev:"14", entry:"", tp:"", pnl:-17.88, status:"closed"},
+  {pair:"WLFLUSDT",  date:"2026-01-05", dir:"short", lev:"22", entry:"", tp:"", pnl:61.59,  status:"closed"},
+  {pair:"ZECUSDT",   date:"2026-02-03", dir:"long",  lev:"18", entry:"", tp:"", pnl:90.02,  status:"closed"},
+  {pair:"JUPUSDT",   date:"2026-03-04", dir:"long",  lev:"24", entry:"", tp:"", pnl:80.05,  status:"closed"},
+  {pair:"WLDUSDT",   date:"2026-04-02", dir:"short", lev:"24", entry:"", tp:"", pnl:47.82,  status:"closed"},
+  {pair:"ALGOUSDT",  date:"2026-05-03", dir:"short", lev:"18", entry:"", tp:"", pnl:57.03,  status:"closed"},
+  {pair:"FILUSDT",   date:"2026-06-15", dir:"long",  lev:"23", entry:"", tp:"", pnl:71.52,  status:"closed"},
+];
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const tradesCol = db.collection('trades');
+
+let trades = [];
+let currentFilter = 'all';
+let isAdmin = false;
+let seeded = false;
+
+// Realtime listener
+tradesCol.orderBy('date', 'desc').onSnapshot(async (snapshot) => {
+  trades = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  if (!seeded && trades.length === 0) {
+    seeded = true;
+    for (const t of SEED_TRADES) {
+      await tradesCol.add(t);
+    }
+    return;
+  }
+  seeded = true;
+
+  renderStats();
+  renderTable();
+  if (isAdmin) renderAdminList();
+});
+
+// Show main immediately (public)
+document.getElementById('loginScreen').classList.add('hidden');
+document.getElementById('mainScreen').classList.add('visible');
+
+function doLogin() {
+  const pwd = document.getElementById('pwdInput').value;
+  if (pwd === ADMIN_PASSWORD) {
+    isAdmin = true;
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('mainScreen').classList.add('visible');
+    document.getElementById('adminBtnEl').style.display = 'block';
+    document.getElementById('loginErr').style.display = 'none';
+    document.getElementById('f_date').value = new Date().toISOString().split('T')[0];
+  } else {
+    document.getElementById('loginErr').style.display = 'block';
+    document.getElementById('pwdInput').value = '';
+  }
+}
+
+function doLogout() {
+  isAdmin = false;
+  closeAdmin();
+  document.getElementById('adminBtnEl').style.display = 'none';
+  document.getElementById('pwdInput').value = '';
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function renderStats() {
+  const closed = trades.filter(t => t.status === 'closed');
+  const wins = closed.filter(t => parseFloat(t.pnl) > 0);
+  const totalPnl = closed.reduce((s, t) => s + parseFloat(t.pnl || 0), 0);
+  const winrate = closed.length ? Math.round(wins.length / closed.length * 100) : 0;
+  const openCount = trades.filter(t => t.status === 'open').length;
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat">
+      <div class="stat-val ${totalPnl >= 0 ? 'green' : 'red'}">${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(0)}%</div>
+      <div class="stat-lbl">Суммарный PnL</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">${winrate}%</div>
+      <div class="stat-lbl">Винрейт</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">${closed.length}</div>
+      <div class="stat-lbl">Закрытых сделок</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val ${openCount > 0 ? 'green' : ''}">${openCount}</div>
+      <div class="stat-lbl">Открытых сейчас</div>
+    </div>`;
+}
+
+function renderTable() {
+  let filtered = [...trades];
+  if (currentFilter === 'open')  filtered = filtered.filter(t => t.status === 'open');
+  if (currentFilter === 'long')  filtered = filtered.filter(t => t.dir === 'long');
+  if (currentFilter === 'short') filtered = filtered.filter(t => t.dir === 'short');
+
+  const area = document.getElementById('tableArea');
+  if (!filtered.length) { area.innerHTML = '<div class="empty">Сделок пока нет</div>'; return; }
+
+  const rows = filtered.map(t => {
+    const pnl = parseFloat(t.pnl);
+    const pos = pnl >= 0;
+    const d = new Date(t.date);
+    const dateStr = d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: '2-digit' });
+    return `<tr>
+      <td><div class="td-pair">${t.pair}</div></td>
+      <td><div class="td-date">${dateStr}</div></td>
+      <td><span class="badge badge-${t.dir === 'long' ? 'l' : 's'}">${t.dir === 'long' ? 'Long' : 'Short'}</span></td>
+      <td><div class="td-entry">${t.entry || '—'}${t.tp ? ' → ' + t.tp : ''}</div></td>
+      <td style="color:var(--grey);font-family:'Space Mono',monospace;font-size:12px">×${t.lev || '—'}</td>
+      <td><div class="td-pnl ${pos ? 'pos' : 'neg'}">${pos ? '+' : ''}${pnl.toFixed(2)}%</div></td>
+      <td><div class="td-status ${t.status === 'open' ? 'status-open' : 'status-closed'}">${t.status === 'open' ? '● Открыта' : 'Закрыта'}</div></td>
+    </tr>`;
+  }).join('');
+
+  area.innerHTML = `<table>
+    <thead><tr>
+      <th>Пара</th><th>Дата</th><th>Тип</th><th>Вход / TP</th><th>Плечо</th><th>PnL %</th><th>Статус</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderAdminList() {
+  const list = document.getElementById('adminList');
+  if (!trades.length) { list.innerHTML = '<div style="color:var(--grey);font-size:13px">Сделок нет</div>'; return; }
+  list.innerHTML = trades.map(t => {
+    const pnl = parseFloat(t.pnl);
+    return `<div class="admin-trade-item">
+      <div>
+        <span style="font-weight:600">${t.pair}</span>
+        <span style="color:var(--grey);font-size:12px;margin-left:10px">${t.date}</span>
+        <span style="color:${pnl>=0?'var(--green)':'var(--red)'};font-family:'Space Mono',monospace;margin-left:10px">${pnl>=0?'+':''}${pnl.toFixed(2)}%</span>
+      </div>
+      <button class="del-btn" onclick="deleteTrade('${t.id}')">Удалить</button>
+    </div>`;
+  }).join('');
+}
+
+async function addTrade() {
+  const pair   = document.getElementById('f_pair').value.trim();
+  const date   = document.getElementById('f_date').value;
+  const dir    = document.getElementById('f_dir').value;
+  const lev    = document.getElementById('f_lev').value || '—';
+  const entry  = document.getElementById('f_entry').value.trim();
+  const tp     = document.getElementById('f_tp').value.trim();
+  const pnl    = document.getElementById('f_pnl').value;
+  const status = document.getElementById('f_status').value;
+
+  if (!pair || !date || !pnl) { alert('Заполни: пару, дату и PnL'); return; }
+
+  const btn = document.getElementById('addBtn');
+  btn.disabled = true; btn.textContent = 'Сохраняю...';
+  try {
+    await tradesCol.add({ pair, date, dir, lev, entry, tp, pnl: parseFloat(pnl), status });
+    ['f_pair','f_entry','f_tp','f_pnl','f_lev'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f_status').value = 'closed';
+  } catch(e) { alert('Ошибка: ' + e.message); }
+  btn.disabled = false; btn.textContent = 'Добавить сделку';
+}
+
+async function deleteTrade(id) {
+  if (!confirm('Удалить сделку?')) return;
+  await tradesCol.doc(id).delete();
+}
+
+function openAdmin() {
+  if (!isAdmin) return;
+  document.getElementById('adminPanel').classList.add('open');
+  renderAdminList();
+}
+
+function closeAdmin() {
+  document.getElementById('adminPanel').classList.remove('open');
+}
+
+document.getElementById('adminPanel').addEventListener('click', function(e) {
+  if (e.target === this) closeAdmin();
+});
+
+// Expose to global
+window.doLogin = doLogin;
+
+function showLoginModal() {
+  document.getElementById('loginModal').style.display = 'flex';
+  document.getElementById('modalPwd').value = '';
+  document.getElementById('modalErr').style.display = 'none';
+}
+
+function hideLoginModal() {
+  document.getElementById('loginModal').style.display = 'none';
+}
+
+function doModalLogin() {
+  const pwd = document.getElementById('modalPwd').value;
+  if (pwd === ADMIN_PASSWORD) {
+    isAdmin = true;
+    hideLoginModal();
+    document.getElementById('adminBtnEl').style.display = 'block';
+  } else {
+    document.getElementById('modalErr').style.display = 'block';
+    document.getElementById('modalPwd').value = '';
+  }
+}
+
+window.showLoginModal = showLoginModal;
+window.hideLoginModal = hideLoginModal;
+window.doModalLogin = doModalLogin;
+window.doLogout = doLogout;
+window.setFilter = setFilter;
+window.addTrade = addTrade;
+window.deleteTrade = deleteTrade;
+window.openAdmin = openAdmin;
+window.closeAdmin = closeAdmin;
+</script>
+</body>
+</html>
